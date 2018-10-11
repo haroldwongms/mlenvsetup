@@ -1,0 +1,409 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"location": {
+			"type": "string",
+			"defaultValue": "[resourceGroup().location]",
+			"metadata": {
+				"description": "Location for all resources."
+			}
+		},
+		"virtualMachineName": {
+			"type": "String",
+			"defaultValue": "dsvm",
+			"metadata": {
+				"description": "VM name."
+			}
+		},
+		"virtualMachineSize": {
+			"type": "String",
+			"defaultValue": "Standard_DS3_v2",
+			"metadata": {
+				"description": "VM size."
+			}
+		},
+		"adminUsername": {
+			"type": "String",
+			"defaultValue": "adminuser",
+			"metadata": {
+				"description": "VM admin username."
+			}
+		},
+		"adminPassword": {
+			"type": "SecureString",
+			"metadata": {
+				"description": "VM admin password."
+			}
+		},
+		"appName": {
+			"type": "string",
+			"metadata": {
+				"description": "The name of the function app that you wish to create."
+			}
+		}
+	},
+	"variables": {
+		"virtualMachineRG": "[resourceGroup().name]",
+		"virtualMachineSize": "Standard_DS3_v2",
+		"osDiskType": "Premium_LRS",
+		"append": "[substring(uniqueString(resourceGroup().id), 1, 8)]",
+		"csvStorageAccountName": "[concat('prediction', variables('append'))]",
+		"functionAppName": "[concat(parameters('appName'), variables('append'))]",
+		"hostingPlanName": "[parameters('appName')]",
+		"webZipUri": "https://raw.githubusercontent.com/haroldwongms/mlenvsetup/master/functionapps.zip",
+		"storageAccountName": "[concat('azfunctions', variables('append'))]",
+		"storageAccountid": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+		"dataDisks": [{
+			"lun": 0,
+			"createOption": "fromImage",
+			"caching": "ReadWrite",
+			"writeAcceleratorEnabled": false,
+			"id": null,
+			"name": null,
+			"storageAccountType": "Premium_LRS"
+		}],
+		"virtualNetworkName": "[concat(resourceGroup().name, '-vnet')]",
+		"addressPrefix": "10.0.0.0/24",
+		"subnetName": "default",
+		"subnetPrefix": "10.0.0.0/24",
+		"networkSecurityGroupName": "[concat(parameters('virtualMachineName'), '-nsg')]",
+		"networkSecurityGroupRules": [{
+				"name": "JupyterHub",
+				"properties": {
+					"priority": 1010,
+					"protocol": "TCP",
+					"access": "Allow",
+					"direction": "Inbound",
+					"sourceApplicationSecurityGroups": [],
+					"destinationApplicationSecurityGroups": [],
+					"sourceAddressPrefix": "*",
+					"sourcePortRange": "*",
+					"destinationAddressPrefix": "*",
+					"destinationPortRange": "8000"
+				}
+			},
+			{
+				"name": "RStudioServer",
+				"properties": {
+					"priority": 1020,
+					"protocol": "TCP",
+					"access": "Allow",
+					"direction": "Inbound",
+					"sourceApplicationSecurityGroups": [],
+					"destinationApplicationSecurityGroups": [],
+					"sourceAddressPrefix": "*",
+					"sourcePortRange": "*",
+					"destinationAddressPrefix": "*",
+					"destinationPortRange": "8787"
+				}
+			},
+			{
+				"name": "default-allow-ssh",
+				"properties": {
+					"priority": 1030,
+					"protocol": "TCP",
+					"access": "Allow",
+					"direction": "Inbound",
+					"sourceApplicationSecurityGroups": [],
+					"destinationApplicationSecurityGroups": [],
+					"sourceAddressPrefix": "*",
+					"sourcePortRange": "*",
+					"destinationAddressPrefix": "*",
+					"destinationPortRange": "22"
+				}
+			},
+			{
+				"name": "port-5000",
+				"properties": {
+					"priority": 1040,
+					"protocol": "TCP",
+					"access": "Allow",
+					"direction": "Inbound",
+					"sourceApplicationSecurityGroups": [],
+					"destinationApplicationSecurityGroups": [],
+					"sourceAddressPrefix": "*",
+					"sourcePortRange": "*",
+					"destinationAddressPrefix": "*",
+					"destinationPortRange": "5000"
+				}
+			}
+		],
+		"publicIpAddressType": "Dynamic",
+		"publicIpAddressName": "[concat('vmdnsip', variables('append'))]",
+		"networkInterfaceName": "[concat(toLower(parameters('virtualMachineName')), '-nic')]",
+		"publicIpAddressSku": "Basic",
+		"diagnosticsStorageAccountName": "[concat('diag', variables('append'),'sa')]",
+		"diagnosticsStorageAccountType": "Standard_LRS",
+		"diagnosticsStorageAccountKind": "Storage",
+		"nsgId": "[resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]",
+		"vnetId": "[resourceId(resourceGroup().name,'Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
+		"subnetRef": "[concat(variables('vnetId'), '/subnets/', variables('subnetName'))]"
+	},
+	"resources": [{
+			"type": "Microsoft.Network/networkInterfaces",
+			"name": "[variables('networkInterfaceName')]",
+			"apiVersion": "2018-04-01",
+			"location": "[parameters('location')]",
+			"tags": {},
+			"properties": {
+				"ipConfigurations": [{
+					"name": "ipconfig1",
+					"properties": {
+						"subnet": {
+							"id": "[variables('subnetRef')]"
+						},
+						"privateIPAllocationMethod": "Dynamic",
+						"publicIpAddress": {
+							"id": "[resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', variables('publicIpAddressName'))]"
+						}
+					}
+				}],
+				"networkSecurityGroup": {
+					"id": "[variables('nsgId')]"
+				}
+			},
+			"dependsOn": [
+				"[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]",
+				"[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+				"[concat('Microsoft.Network/publicIpAddresses/', variables('publicIpAddressName'))]"
+			]
+		},
+		{
+			"type": "Microsoft.Network/networkSecurityGroups",
+			"name": "[variables('networkSecurityGroupName')]",
+			"apiVersion": "2018-08-01",
+			"location": "[parameters('location')]",
+			"tags": {},
+			"properties": {
+				"securityRules": "[variables('networkSecurityGroupRules')]"
+			}
+		},
+		{
+			"type": "Microsoft.Network/virtualNetworks",
+			"name": "[variables('virtualNetworkName')]",
+			"apiVersion": "2018-08-01",
+			"location": "[parameters('location')]",
+			"tags": {},
+			"properties": {
+				"addressSpace": {
+					"addressPrefixes": [
+						"[variables('addressPrefix')]"
+					]
+				},
+				"subnets": [{
+					"name": "[variables('subnetName')]",
+					"properties": {
+						"addressPrefix": "[variables('subnetPrefix')]"
+					}
+				}]
+			}
+		},
+		{
+			"type": "Microsoft.Network/publicIpAddresses",
+			"sku": {
+				"name": "[variables('publicIpAddressSku')]"
+			},
+			"name": "[variables('publicIpAddressName')]",
+			"apiVersion": "2018-08-01",
+			"location": "[parameters('location')]",
+			"tags": {},
+			"properties": {
+				"publicIpAllocationMethod": "[variables('publicIpAddressType')]",
+				"dnsSettings": {
+					"domainNameLabel": "[variables('publicIpAddressName')]"
+				}
+			}
+		},
+		{
+			"type": "Microsoft.Compute/virtualMachines",
+			"name": "[parameters('virtualMachineName')]",
+			"apiVersion": "2018-04-01",
+			"location": "[parameters('location')]",
+			"plan": {
+				"name": "linuxdsvmubuntu",
+				"publisher": "microsoft-ads",
+				"product": "linux-data-science-vm-ubuntu"
+			},
+			"tags": {},
+			"properties": {
+				"hardwareProfile": {
+					"vmSize": "[parameters('virtualMachineSize')]"
+				},
+				"storageProfile": {
+					"osDisk": {
+						"name": "[concat('vm', uniqueString(parameters('virtualMachineName')), '-osdisk')]",
+						"createOption": "fromImage",
+						"managedDisk": {
+							"storageAccountType": "[variables('osDiskType')]"
+						}
+					},
+					"imageReference": {
+						"publisher": "microsoft-ads",
+						"offer": "linux-data-science-vm-ubuntu",
+						"sku": "linuxdsvmubuntu",
+						"version": "18.09.01"
+					},
+					"copy": [{
+						"name": "dataDisks",
+						"count": "[length(variables('dataDisks'))]",
+						"input": {
+							"lun": "[variables('dataDisks')[copyIndex('dataDisks')].lun]",
+							"createOption": "[variables('dataDisks')[copyIndex('dataDisks')].createOption]",
+							"caching": "[variables('dataDisks')[copyIndex('dataDisks')].caching]",
+							"writeAcceleratorEnabled": "[variables('dataDisks')[copyIndex('dataDisks')].writeAcceleratorEnabled]",
+							"managedDisk": {
+								"id": "[coalesce(variables('dataDisks')[copyIndex('dataDisks')].id, if(equals(variables('dataDisks')[copyIndex('dataDisks')].name, json('null')), json('null'), resourceId('Microsoft.Compute/disks', variables('dataDisks')[copyIndex('dataDisks')].name)))]",
+								"storageAccountType": "[variables('dataDisks')[copyIndex('dataDisks')].storageAccountType]"
+							}
+						}
+					}]
+				},
+				"networkProfile": {
+					"networkInterfaces": [{
+						"id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaceName'))]"
+					}]
+				},
+				"osProfile": {
+					"computerName": "[parameters('virtualMachineName')]",
+					"adminUsername": "[parameters('adminUsername')]",
+					"adminPassword": "[parameters('adminPassword')]"
+				},
+				"diagnosticsProfile": {
+					"bootDiagnostics": {
+						"enabled": true,
+						"storageUri": "[concat('https://', variables('diagnosticsStorageAccountName'), '.blob.core.windows.net/')]"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat('Microsoft.Network/networkInterfaces/', variables('networkInterfaceName'))]",
+				"[concat('Microsoft.Storage/storageAccounts/', variables('diagnosticsStorageAccountName'))]"
+			]
+		},
+		{
+			"type": "Microsoft.Storage/storageAccounts",
+			"sku": {
+				"name": "[variables('diagnosticsStorageAccountType')]"
+			},
+			"kind": "[variables('diagnosticsStorageAccountKind')]",
+			"name": "[variables('diagnosticsStorageAccountName')]",
+			"apiVersion": "2018-02-01",
+			"location": "[parameters('location')]",
+			"tags": {},
+			"properties": {}
+		},
+		{
+			"type": "Microsoft.Storage/storageAccounts",
+			"name": "[variables('storageAccountName')]",
+			"apiVersion": "2018-02-01",
+			"location": "[parameters('location')]",
+			"kind": "Storage",
+			"sku": {
+				"name": "Standard_LRS"
+			}
+		},
+		{
+			"type": "Microsoft.Storage/storageAccounts",
+			"name": "[variables('csvStorageAccountName')]",
+			"apiVersion": "2018-02-01",
+			"location": "[parameters('location')]",
+			"kind": "Storage",
+			"sku": {
+				"name": "Standard_LRS"
+			}
+		},
+		{
+			"type": "Microsoft.Web/serverfarms",
+			"apiVersion": "2016-09-01",
+			"name": "[variables('hostingPlanName')]",
+			"location": "[parameters('location')]",
+			"sku": {
+				"name": "Y1",
+				"tier": "Dynamic",
+				"size": "Y1",
+				"family": "Y",
+				"capacity": 0
+			},
+			"properties": {
+				"name": "[variables('hostingPlanName')]",
+				"computeMode": "Dynamic"
+			}
+		},
+		{
+			"apiVersion": "2016-08-01",
+			"type": "Microsoft.Web/sites",
+			"name": "[variables('functionAppName')]",
+			"location": "[parameters('location')]",
+			"kind": "functionapp",
+			"dependsOn": [
+				"[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+				"[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+				"[concat('Microsoft.Network/publicIPAddresses/', variables('publicIpAddressName'))]"
+			],
+			"properties": {
+				"serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+				"siteConfig": {
+					"appSettings": [{
+							"name": "AzureWebJobsDashboard",
+							"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+						},
+						{
+							"name": "AzureWebJobsStorage",
+							"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+						},
+						{
+							"name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+							"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1)]"
+						},
+						{
+							"name": "WEBSITE_CONTENTSHARE",
+							"value": "[toLower(variables('functionAppName'))]"
+						},
+						{
+							"name": "FUNCTIONS_EXTENSION_VERSION",
+							"value": "~2"
+						},
+						{
+							"name": "WEBSITE_NODE_DEFAULT_VERSION",
+							"value": "8.11.1"
+						},
+						{
+							"name": "blobBaseURI",
+							"value": "[reference(resourceId(resourceGroup().name, 'Microsoft.Storage/storageAccounts', variables('csvStorageAccountName')), '2018-02-01').primaryEndpoints['blob']]"
+						},
+						{
+							"name": "blobconnection",
+							"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('csvStorageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1, ';EndpointSuffix=core.windows.net')]"
+						},
+						{
+							"name": "ModelEndpoint",
+							"value": "[concat('http://', reference(variables('publicIpAddressName')).dnsSettings.fqdn, ':5000/forecast')]"
+						}
+					]
+				}
+			},
+			"resources": [{
+				"type": "extensions",
+				"name": "MSDeploy",
+				"apiVersion": "2016-08-01",
+				"location": "[resourceGroup().location]",
+				"dependsOn": [
+					"[resourceId('Microsoft.Web/sites/', variables('functionAppName'))]"
+				],
+				"tags": {
+					"displayName": "DeployTheFunction"
+				},
+				"properties": {
+					"packageUri": "[variables('webZipUri')]"
+				}
+			}]
+		}
+	],
+	"outputs": {
+		"adminUsername": {
+			"type": "String",
+			"value": "[parameters('adminUsername')]"
+		}
+	}
+}
