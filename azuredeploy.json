@@ -54,6 +54,7 @@
 		"webZipUri": "https://raw.githubusercontent.com/haroldwongms/mlenvsetup/master/functionapps.zip",
 		"storageAccountName": "[concat('azfunctions', variables('append'))]",
 		"storageAccountid": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]",
+		"storageAccountid2": "[concat(resourceGroup().id,'/providers/','Microsoft.Storage/storageAccounts/', variables('csvStorageAccountName'))]",
 		"dataDisks": [{
 			"lun": 0,
 			"createOption": "fromImage",
@@ -282,6 +283,24 @@
 			]
 		},
 		{
+			"type": "Microsoft.Compute/virtualMachines/extensions",
+			"name": "[concat(parameters('virtualMachineName'), '/deployContainer')]",
+			"location": "[parameters('location')]",
+			"apiVersion": "2018-04-01",
+			"properties": {
+				"publisher": "Microsoft.Azure.Extensions",
+				"type": "CustomScript",
+				"typeHandlerVersion": "2.0",
+				"autoUpgradeMinorVersion": true,
+				"protectedSettings": {
+					"commandToExecute": "docker run --name cashforecasting -d -p 5000:5000 davevoyles/docker-cash-forecasting-pred"
+				}
+			},
+			"dependsOn": [
+				"[parameters('virtualMachineName')]"
+			]
+		},
+		{
 			"type": "Microsoft.Storage/storageAccounts",
 			"sku": {
 				"name": "[variables('diagnosticsStorageAccountType')]"
@@ -374,7 +393,7 @@
 						},
 						{
 							"name": "blobconnection",
-							"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('csvStorageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid'),'2015-05-01-preview').key1, ';EndpointSuffix=core.windows.net')]"
+							"value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('csvStorageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid2'),'2015-05-01-preview').key1, ';EndpointSuffix=core.windows.net')]"
 						},
 						{
 							"name": "ModelEndpoint",
@@ -404,6 +423,10 @@
 		"adminUsername": {
 			"type": "String",
 			"value": "[parameters('adminUsername')]"
+		},
+		"CSV Storage Account": {
+			"type": "String",
+			"value": "[variables('csvStorageAccountName')]"
 		}
 	}
 }
