@@ -2,6 +2,14 @@
 	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 	"contentVersion": "1.0.0.0",
 	"parameters": {
+		"_artifactsLocation": {
+			"type": "string",
+			"metadata": {
+				"description": "Base URL for Template Files",
+				"artifactsBaseUrl": ""
+			},
+			"defaultValue": "https://raw.githubusercontent.com/haroldwongms/mlenvsetup/master"
+		},
 		"location": {
 			"type": "string",
 			"defaultValue": "[resourceGroup().location]",
@@ -44,6 +52,8 @@
 		}
 	},
 	"variables": {
+		"singlequote": "'",
+		"deployScriptUrl": "[concat(parameters('_artifactsLocation'), '/scripts/deploy.sh')]",
 		"virtualMachineRG": "[resourceGroup().name]",
 		"virtualMachineSize": "Standard_DS3_v2",
 		"osDiskType": "Premium_LRS",
@@ -292,8 +302,13 @@
 				"type": "CustomScript",
 				"typeHandlerVersion": "2.0",
 				"autoUpgradeMinorVersion": true,
+			"settings": {
+				"fileUris": [
+					"[variables('deployScriptUrl')]"
+				]
+			},
 				"protectedSettings": {
-					"commandToExecute": "docker run --name cashforecasting -d -p 5000:5000 davevoyles/docker-cash-forecasting-pred"
+					"commandToExecute": "[concat('bash deploy.sh ', variables('singlequote'), concat('DefaultEndpointsProtocol=https;AccountName=', variables('csvStorageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid2'),'2015-05-01-preview').key1, ';EndpointSuffix=core.windows.net'), variables('singlequote'))]"
 				}
 			},
 			"dependsOn": [
