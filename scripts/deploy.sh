@@ -9,7 +9,6 @@ echo $(date) " - Script Starting"
 echo $(date) " - Create blob containers"
 python3 createcontainer.py
 python3 createcontainer.py
-python3 createcontainer.py
 
 echo $(date) " - Starting cash-forecasting-ui container exposed on port 8080"
 docker run --name webui -d -p 8080:80 davevoyles/cash-forecasting-ui
@@ -40,5 +39,7 @@ fi
 
 echo $(date) " - Listing running containers"
 docker ps
+
+python3 createcontainer.py
 
 echo $(date) " - Script complete"
