@@ -54,6 +54,7 @@
 	"variables": {
 		"singlequote": "'",
 		"deployScriptUrl": "[concat(parameters('_artifactsLocation'), '/scripts/deploy.sh')]",
+		"pythonUrl": "[concat(parameters('_artifactsLocation'), '/createcontainer.py')]",
 		"virtualMachineRG": "[resourceGroup().name]",
 		"virtualMachineSize": "Standard_DS3_v2",
 		"osDiskType": "Premium_LRS",
@@ -304,15 +305,17 @@
 				"autoUpgradeMinorVersion": true,
 			"settings": {
 				"fileUris": [
-					"[variables('deployScriptUrl')]"
+					"[variables('deployScriptUrl')]",
+					"[variables('pythonUrl')]"
 				]
 			},
 				"protectedSettings": {
-					"commandToExecute": "[concat('bash deploy.sh ', variables('singlequote'), concat('DefaultEndpointsProtocol=https;AccountName=', variables('csvStorageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid2'),'2015-05-01-preview').key1, ';EndpointSuffix=core.windows.net'), variables('singlequote'))]"
+					"commandToExecute": "[concat('bash deploy.sh ', variables('singlequote'), concat('DefaultEndpointsProtocol=https;AccountName=', variables('csvStorageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid2'),'2015-05-01-preview').key1, ';EndpointSuffix=core.windows.net'), variables('singlequote'), listKeys(variables('storageAccountid2'),'2015-05-01-preview').key1, variables('csvStorageAccountName'))]"
 				}
 			},
 			"dependsOn": [
-				"[parameters('virtualMachineName')]"
+				"[parameters('virtualMachineName')]",
+				"[concat('Microsoft.Storage/storageAccounts/', variables('csvStorageAccountName'))]"
 			]
 		},
 		{

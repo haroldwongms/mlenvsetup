@@ -1,7 +1,13 @@
 #!/bin/bash
 
 export connstring="$1"
+export AZURE_STORAGE_ACCOUNT="$2"
+export AZURE_STORAGE_ACCESS_KEY="$3"
+
 echo $(date) " - Script Starting"
+
+echo $(date) " - Create blob containers"
+python createcontainer.py
 
 echo $(date) " - Starting cash-forecasting-ui container exposed on port 8080"
 docker run --name webui -d -p 8080:80 davevoyles/cash-forecasting-ui
