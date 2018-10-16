@@ -1,8 +1,8 @@
 #!/bin/bash
 
 export connstring="$1"
-export AZURE_STORAGE_ACCOUNT="$2"
-export AZURE_STORAGE_ACCESS_KEY="$3"
+export AZURE_STORAGE_ACCESS_KEY="$2"
+export AZURE_STORAGE_ACCOUNT="$3"
 
 echo $(date) " - Script Starting"
 

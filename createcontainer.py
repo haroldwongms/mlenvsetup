@@ -11,8 +11,8 @@ block_blob_service = BlockBlobService(account_name=os.getenv('AZURE_STORAGE_ACCO
 containername = ["datauploaded", "datavalidated", "dataresult"]
 
 for index in range(len(containername)):
-    block_blob_service.create_container(containername[index])
-
-    # Set the permission so the blobs are public.
-    block_blob_service.set_container_acl(containername[index], public_access=PublicAccess.Container)
-
+    try:
+        status = block_blob_service.create_container(containername[index], public_access=PublicAccess.Container)
+        print("Container %s"%containername[index] + " creation success status: %s"%status)
+    except:
+        print("Container %s"%containername[index] + " creation failed")
