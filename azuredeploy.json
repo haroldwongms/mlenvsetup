@@ -310,7 +310,7 @@
 				]
 			},
 				"protectedSettings": {
-					"commandToExecute": "[concat('bash deploy.sh ', variables('singlequote'), concat('DefaultEndpointsProtocol=https;AccountName=', variables('csvStorageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid2'),'2015-05-01-preview').key1, ';EndpointSuffix=core.windows.net'), variables('singlequote'), listKeys(variables('storageAccountid2'),'2015-05-01-preview').key1, variables('csvStorageAccountName'))]"
+					"commandToExecute": "[concat('bash deploy.sh ', variables('singlequote'), concat('DefaultEndpointsProtocol=https;AccountName=', variables('csvStorageAccountName'), ';AccountKey=', listKeys(variables('storageAccountid2'),'2015-05-01-preview').key1, ';EndpointSuffix=core.windows.net'), variables('singlequote'), ' ', variables('singlequote'), listKeys(variables('storageAccountid2'),'2015-05-01-preview').key1, variables('singlequote'), ' ', variables('csvStorageAccountName'))]"
 				}
 			},
 			"dependsOn": [
