@@ -6,10 +6,6 @@ export AZURE_STORAGE_ACCOUNT="$3"
 
 echo $(date) " - Script Starting"
 
-python test.py
-
-echo $(date) " - Create blob containers"
-
 echo $(date) " - Starting cash-forecasting-ui container exposed on port 8080"
 docker run --name webui -d -p 8080:80 davevoyles/cash-forecasting-ui
 if [ $? -eq 0 ]
@@ -40,6 +36,7 @@ fi
 echo $(date) " - Listing running containers"
 docker ps
 
+echo $(date) " - Create blob containers"
 /anaconda/envs/py35/bin/python3 createcontainer.py
 
 echo $(date) " - Script complete"
