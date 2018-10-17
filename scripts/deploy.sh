@@ -6,6 +6,9 @@ export AZURE_STORAGE_ACCOUNT="$3"
 
 echo $(date) " - Script Starting"
 
+echo $AZURE_STORAGE_ACCESS_KEY
+echo $AZURE_STORAGE_ACCOUNT
+
 echo $(date) " - Create blob containers"
 python3 createcontainer.py
 python3 createcontainer.py
