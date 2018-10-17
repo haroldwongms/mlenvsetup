@@ -55,6 +55,7 @@
 		"singlequote": "'",
 		"deployScriptUrl": "[concat(parameters('_artifactsLocation'), '/scripts/deploy.sh')]",
 		"pythonUrl": "[concat(parameters('_artifactsLocation'), '/createcontainer.py')]",
+		"testUrl": "[concat(parameters('_artifactsLocation'), '/test.py')]",
 		"virtualMachineRG": "[resourceGroup().name]",
 		"virtualMachineSize": "Standard_DS3_v2",
 		"osDiskType": "Premium_LRS",
@@ -126,7 +127,7 @@
 				}
 			},
 			{
-				"name": "port-5000",
+				"name": "port_5000",
 				"properties": {
 					"priority": 1040,
 					"protocol": "TCP",
@@ -138,6 +139,36 @@
 					"sourcePortRange": "*",
 					"destinationAddressPrefix": "*",
 					"destinationPortRange": "5000"
+				}
+			},
+			{
+				"name": "port_5001",
+				"properties": {
+					"priority": 1050,
+					"protocol": "TCP",
+					"access": "Allow",
+					"direction": "Inbound",
+					"sourceApplicationSecurityGroups": [],
+					"destinationApplicationSecurityGroups": [],
+					"sourceAddressPrefix": "*",
+					"sourcePortRange": "*",
+					"destinationAddressPrefix": "*",
+					"destinationPortRange": "5001"
+				}
+			},
+			{
+				"name": "port_8080",
+				"properties": {
+					"priority": 1060,
+					"protocol": "TCP",
+					"access": "Allow",
+					"direction": "Inbound",
+					"sourceApplicationSecurityGroups": [],
+					"destinationApplicationSecurityGroups": [],
+					"sourceAddressPrefix": "*",
+					"sourcePortRange": "*",
+					"destinationAddressPrefix": "*",
+					"destinationPortRange": "8080"
 				}
 			}
 		],
@@ -306,7 +337,8 @@
 			"settings": {
 				"fileUris": [
 					"[variables('deployScriptUrl')]",
-					"[variables('pythonUrl')]"
+					"[variables('pythonUrl')]",
+					"[variables('testUrl')]"
 				]
 			},
 				"protectedSettings": {
@@ -442,9 +474,9 @@
 			"type": "String",
 			"value": "[parameters('adminUsername')]"
 		},
-		"CSV Storage Account": {
+		"Web Front End": {
 			"type": "String",
-			"value": "[variables('csvStorageAccountName')]"
+			"value": "[concat('http://', reference(variables('publicIpAddressName')).dnsSettings.fqdn, ':8080')]"
 		}
 	}
 }
