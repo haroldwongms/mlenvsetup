@@ -55,7 +55,6 @@
 		"singlequote": "'",
 		"deployScriptUrl": "[concat(parameters('_artifactsLocation'), '/scripts/deploy.sh')]",
 		"pythonUrl": "[concat(parameters('_artifactsLocation'), '/createcontainer.py')]",
-		"testUrl": "[concat(parameters('_artifactsLocation'), '/test.py')]",
 		"virtualMachineRG": "[resourceGroup().name]",
 		"virtualMachineSize": "Standard_DS3_v2",
 		"osDiskType": "Premium_LRS",
@@ -337,8 +336,7 @@
 			"settings": {
 				"fileUris": [
 					"[variables('deployScriptUrl')]",
-					"[variables('pythonUrl')]",
-					"[variables('testUrl')]"
+					"[variables('pythonUrl')]"
 				]
 			},
 				"protectedSettings": {
